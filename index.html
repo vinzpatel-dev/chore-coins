@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1a1a2e" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Chore Coins" />
+  <title>Chore Coins 🌟</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icon-192.png" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+      min-height: 100vh;
+      min-height: -webkit-fill-available;
+      color: #f0f0f0;
+      overscroll-behavior: none;
+    }
+    #app { min-height: 100vh; display: flex; flex-direction: column; align-items: center; }
+
+    /* PIN Screen */
+    .pin-wrap {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 100vh; padding: 40px 24px;
+    }
+    .pin-logo { font-size: 64px; margin-bottom: 12px; }
+    .pin-title { font-size: 28px; font-weight: 800; margin-bottom: 4px; }
+    .pin-subtitle { font-size: 15px; color: #a0a0c0; margin-bottom: 32px; }
+    .pin-dots { display: flex; gap: 16px; margin-bottom: 12px; }
+    .dot {
+      width: 18px; height: 18px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: transparent; transition: all 0.15s;
+    }
+    .dot.filled { background: #6C63FF; border-color: #6C63FF; transform: scale(1.1); }
+    .dot.error  { background: #f44336; border-color: #f44336; }
+    .pin-error {
+      font-size: 13px; color: #f44336; min-height: 20px;
+      margin-bottom: 20px; font-weight: 600; text-align: center;
+    }
+    .pin-pad {
+      display: grid; grid-template-columns: repeat(3, 72px);
+      gap: 14px;
+    }
+    .pin-key {
+      width: 72px; height: 72px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.12);
+      color: #fff; font-size: 22px; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .pin-key:active { background: #6C63FF; transform: scale(0.94); }
+    .pin-key-empty { background: transparent; border-color: transparent; cursor: default; }
+    .pin-key-empty:active { background: transparent; transform: none; }
+    .pin-key-del { font-size: 20px; }
+
+    /* Loading */
+    #loading {
+      position: fixed; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 60%, #0f3460 100%);
+      z-index: 999; gap: 16px;
+    }
+    #loading .logo { font-size: 56px; animation: pulse 1.2s infinite; }
+    #loading .text { font-size: 18px; font-weight: 700; color: #a0a0c0; }
+    @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.15)} }
+
+    /* Header */
+    .header {
+      width: 100%; background: rgba(255,255,255,0.05);
+      backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.1);
+      padding: 18px 24px 12px; text-align: center;
+      position: sticky; top: 0; z-index: 10;
+    }
+    .header h1 { font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
+    .header p { font-size: 12px; color: #a0a0c0; margin-top: 2px; }
+
+    /* Sync indicator */
+    .sync-dot {
+      display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+      margin-left: 8px; vertical-align: middle;
+      background: #4CAF50; transition: background 0.3s;
+    }
+    .sync-dot.syncing { background: #FFC107; animation: blink 0.6s infinite; }
+    .sync-dot.error { background: #f44336; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+    /* Toast */
+    .toast {
+      position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+      background: #6C63FF; color: #fff; padding: 10px 22px;
+      border-radius: 30px; font-weight: 700; font-size: 15px; z-index: 999;
+      box-shadow: 0 4px 20px rgba(108,99,255,0.5);
+      animation: toastIn 0.25s ease; pointer-events: none;
+    }
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex; gap: 6px; margin: 16px 0 4px;
+      background: rgba(255,255,255,0.07); border-radius: 30px;
+      padding: 4px; border: 1px solid rgba(255,255,255,0.1);
+    }
+    .tab-btn {
+      padding: 8px 18px; border-radius: 24px; border: none;
+      background: transparent; color: #a0a0c0;
+      font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.18s;
+    }
+    .tab-btn.active { background: #6C63FF; color: #fff; }
+
+    /* Content */
+    .content { width: 100%; max-width: 480px; padding: 0 16px 80px; }
+
+    /* Kid switcher */
+    .kid-switcher { display: flex; gap: 10px; margin: 16px 0 12px; justify-content: center; }
+    .kid-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 20px;
+      border: 2px solid transparent; color: #fff;
+      font-weight: 700; font-size: 15px; cursor: pointer; transition: all 0.18s;
+      background: rgba(255,255,255,0.07);
+    }
+    .kid-btn .kid-emoji { font-size: 20px; }
+
+    /* Balance card */
+    .balance-card {
+      border-radius: 18px; padding: 18px 22px; margin-bottom: 16px;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .balance-label { font-size: 13px; color: #a0a0c0; margin-bottom: 4px; }
+    .balance-amount { font-size: 36px; font-weight: 800; }
+    .balance-emoji { font-size: 48px; }
+
+    /* Section label */
+    .section-label { font-size: 12px; color: #a0a0c0; margin-bottom: 8px; font-weight: 600; letter-spacing: 0.5px; }
+
+    /* Chore items */
+    .chore-list { display: flex; flex-direction: column; gap: 8px; }
+    .chore-item {
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(255,255,255,0.05);
+      border: 1.5px solid rgba(255,255,255,0.1);
+      border-radius: 14px; padding: 13px 16px;
+      cursor: pointer; text-align: left; width: 100%; transition: all 0.18s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .chore-item.done {
+      background: rgba(108,199,108,0.15);
+      border-color: rgba(76,175,80,0.3);
+    }
+    .chore-check {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(255,255,255,0.08); border: 2px solid rgba(255,255,255,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0; transition: all 0.18s;
+    }
+    .chore-item.done .chore-check { background: #4CAF50; border-color: #4CAF50; }
+    .chore-name { flex: 1; font-size: 15px; font-weight: 600; color: #e8e8f0; }
+    .chore-item.done .chore-name { color: #88dd88; text-decoration: line-through; }
+    .chore-amount { font-size: 14px; font-weight: 700; color: #6C63FF; }
+    .chore-item.done .chore-amount { color: #88dd88; }
+
+    /* Summary cards */
+    .summary-cards { display: flex; gap: 12px; margin-bottom: 20px; }
+    .summary-card {
+      flex: 1; border-radius: 16px; padding: 16px; text-align: center;
+    }
+    .summary-card .s-emoji { font-size: 32px; }
+    .summary-card .s-name { font-size: 13px; color: #a0a0c0; margin: 4px 0 2px; }
+    .summary-card .s-amount { font-size: 26px; font-weight: 800; }
+    .payout-btn {
+      margin-top: 10px; padding: 6px 14px; border-radius: 12px; border: none;
+      color: #fff; font-weight: 700; font-size: 12px; cursor: pointer;
+    }
+
+    /* Payout panel */
+    .payout-panel {
+      background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 16px; padding: 16px; margin-bottom: 16px;
+    }
+    .payout-panel h3 { font-weight: 700; margin-bottom: 10px; font-size: 15px; }
+    .input-row { display: flex; gap: 8px; }
+
+    /* Inputs */
+    input[type=text], input[type=number] {
+      background: rgba(255,255,255,0.08); border: 1.5px solid rgba(255,255,255,0.15);
+      border-radius: 10px; padding: 9px 12px; color: #fff; font-size: 15px;
+      outline: none; transition: border-color 0.2s;
+    }
+    input:focus { border-color: #6C63FF; }
+
+    /* Buttons */
+    .btn-primary {
+      padding: 9px 18px; background: #6C63FF; border: none;
+      border-radius: 10px; color: #fff; font-weight: 700; cursor: pointer; font-size: 14px;
+    }
+    .btn-ghost {
+      padding: 9px 14px; background: rgba(255,255,255,0.08); border: none;
+      border-radius: 10px; color: #aaa; cursor: pointer; font-size: 14px;
+    }
+    .btn-full {
+      width: 100%; padding: 12px; background: #6C63FF; border: none;
+      border-radius: 12px; color: #fff; font-weight: 700; font-size: 15px;
+      cursor: pointer; margin-bottom: 18px;
+    }
+
+    /* History */
+    .history-item {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.04); border-radius: 12px;
+      padding: 10px 14px; margin-bottom: 6px;
+    }
+    .history-item .h-icon { font-size: 20px; }
+    .history-item .h-label { font-size: 14px; font-weight: 600; }
+    .history-item .h-sub { font-size: 12px; color: #888; }
+    .history-item .h-amount { font-size: 14px; font-weight: 700; }
+
+    /* Settings */
+    .settings-row { display: flex; gap: 8px; margin-bottom: 10px; align-items: center; }
+    .settings-emoji { font-size: 22px; line-height: 38px; }
+    .chore-manage-item {
+      display: flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,0.05); border-radius: 12px;
+      padding: 10px 14px; margin-bottom: 6px;
+    }
+    .btn-edit {
+      background: rgba(108,99,255,0.15); border: none; border-radius: 8px;
+      color: #a0a0ff; font-weight: 700; padding: 4px 10px; cursor: pointer; font-size: 14px;
+    }
+    .chore-edit-row {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(108,99,255,0.08); border: 1.5px solid rgba(108,99,255,0.25);
+      border-radius: 12px; padding: 10px 12px; margin-bottom: 6px;
+    }
+      background: rgba(255,80,80,0.15); border: none; border-radius: 8px;
+      color: #ff8080; font-weight: 700; padding: 4px 10px; cursor: pointer; font-size: 14px;
+    }
+
+    /* Empty state */
+    .empty { color: #555; text-align: center; padding: 30px 0; font-size: 14px; }
+  </style>
+</head>
+<body>
+<div id="loading">
+  <div class="logo">🌟</div>
+  <div class="text">Loading Chore Coins…</div>
+</div>
+
+<!-- PIN LOCK SCREEN -->
+<div id="pinScreen" style="display:none">
+  <div class="pin-wrap">
+    <div class="pin-logo">🌟</div>
+    <div class="pin-title">Chore Coins</div>
+    <div class="pin-subtitle" id="pinSubtitle">Enter PIN to continue</div>
+    <div class="pin-dots" id="pinDots">
+      <span class="dot" id="d0"></span>
+      <span class="dot" id="d1"></span>
+      <span class="dot" id="d2"></span>
+      <span class="dot" id="d3"></span>
+    </div>
+    <div id="pinError" class="pin-error"></div>
+    <div class="pin-pad">
+      <button class="pin-key" onclick="pinKey('1')">1</button>
+      <button class="pin-key" onclick="pinKey('2')">2</button>
+      <button class="pin-key" onclick="pinKey('3')">3</button>
+      <button class="pin-key" onclick="pinKey('4')">4</button>
+      <button class="pin-key" onclick="pinKey('5')">5</button>
+      <button class="pin-key" onclick="pinKey('6')">6</button>
+      <button class="pin-key" onclick="pinKey('7')">7</button>
+      <button class="pin-key" onclick="pinKey('8')">8</button>
+      <button class="pin-key" onclick="pinKey('9')">9</button>
+      <button class="pin-key pin-key-empty"></button>
+      <button class="pin-key" onclick="pinKey('0')">0</button>
+      <button class="pin-key pin-key-del" onclick="pinDel()">⌫</button>
+    </div>
+  </div>
+</div>
+
+<div id="app" style="display:none">
+  <div class="header">
+    <h1>🌟 Chore Coins <span class="sync-dot" id="syncDot"></span></h1>
+    <p>Pocket money tracker</p>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('chores')">Chores</button>
+    <button class="tab-btn" onclick="switchTab('summary')">Summary</button>
+    <button class="tab-btn" onclick="switchTab('settings')">Settings</button>
+  </div>
+
+  <div class="content">
+    <!-- CHORES TAB -->
+    <div id="tab-chores">
+      <div class="kid-switcher" id="kidSwitcher"></div>
+      <div id="balanceCard" class="balance-card"></div>
+      <div class="section-label">TODAY'S CHORES — TAP TO MARK DONE</div>
+      <div class="chore-list" id="choreList"></div>
+    </div>
+
+    <!-- SUMMARY TAB -->
+    <div id="tab-summary" style="display:none">
+      <div style="margin-top:16px">
+        <div class="summary-cards" id="summaryCards"></div>
+        <div id="payoutPanel" style="display:none" class="payout-panel">
+          <h3 id="payoutTitle">Pay out</h3>
+          <div class="input-row">
+            <input type="number" id="payoutAmt" placeholder="Amount $" step="0.50" min="0"
+              style="flex:1" oninput="updatePayoutMax()" />
+            <button class="btn-primary" onclick="confirmPayout()">Confirm</button>
+            <button class="btn-ghost" onclick="closePayout()">✕</button>
+          </div>
+          <div id="payoutMax" style="font-size:12px;color:#a0a0c0;margin-top:6px"></div>
+        </div>
+        <div class="section-label">RECENT ACTIVITY</div>
+        <div id="historyList"></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div id="tab-settings" style="display:none">
+      <div style="margin-top:16px">
+        <div class="section-label">KIDS' NAMES</div>
+        <div id="kidNameSettings"></div>
+
+        <div class="section-label" style="margin-top:18px">CHANGE PIN</div>
+        <div style="display:flex;gap:8px;margin-bottom:18px">
+          <input type="password" id="newPin" placeholder="New 4-digit PIN" maxlength="4"
+            inputmode="numeric" pattern="[0-9]*" style="flex:1;letter-spacing:6px;font-size:20px" />
+          <input type="password" id="confirmPin" placeholder="Confirm PIN" maxlength="4"
+            inputmode="numeric" pattern="[0-9]*" style="flex:1;letter-spacing:6px;font-size:20px" />
+          <button class="btn-primary" onclick="changePin()">Save</button>
+        </div>
+
+        <div class="section-label" style="margin-top:18px">ADD A NEW CHORE</div>
+        <div style="display:flex;gap:8px;margin-bottom:8px">
+          <input type="text" id="newEmoji" value="⭐" maxlength="2"
+            style="width:48px;text-align:center;font-size:20px;padding:9px 4px" />
+          <input type="text" id="newChoreLabel" placeholder="Chore name" style="flex:1" />
+          <input type="number" id="newChoreAmt" placeholder="$" step="0.50" min="0" style="width:64px" />
+        </div>
+        <button class="btn-full" onclick="addChore()">+ Add Chore</button>
+
+        <div class="section-label">MANAGE CHORES</div>
+        <div id="choreManageList"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
